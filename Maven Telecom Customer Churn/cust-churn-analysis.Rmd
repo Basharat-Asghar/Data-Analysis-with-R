@@ -1,0 +1,953 @@
+---
+title: "Customer Churn Analytics"
+author: "Basharat Asghar"
+date: '2022-11-16'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+### Loading Libraries  
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(forcats)
+library(tidyr)
+library(vroom)
+library(janitor)
+library(skimr)
+```
+
+### Importing Data  
+
+```{r}
+churn_df <- vroom("telecom_customer_churn.csv")
+```
+
+```{r}
+skim(churn_df)
+```
+
+Dataset consists of 7043 rows and 38 columns.  
+we have no duplicated customers, all are unique customers.  
+
+**Converting column names to snake-case.**  
+
+```{r}
+churn_df <- churn_df %>%
+  clean_names()
+```
+
+```{r}
+head(churn_df)
+```
+
+```{r}
+churn_df %>% 
+  count(gender)
+```
+
+Almost equal number of customers from both genders.  
+
+```{r}
+cust_status_pal <- c(Churned = "#0077b6", Joined = "#5fa8d3",
+                               Stayed = "#bfdbf7")
+```
+
+```{r}
+churn_df |> 
+  ggplot(aes(customer_status,age, fill = customer_status)) +
+  geom_boxplot(show.legend = FALSE) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7)) +
+  scale_fill_manual(values = cust_status_pal) +
+  labs(x = "Customer Status",
+       y = "Age",
+       title = "In which Age customers most likely to Churn?",
+       caption = "Data Source : Maven Analytics")
+```
+
+Older customers are more likely to churn. Newer joined customers have lower mean value for Age than other two Churned or Stayed.  
+
+```{r}
+churn_df |> 
+  group_by(customer_status) |> 
+  summarise(count= n(), .groups = "drop") |> 
+  arrange(desc(count)) |> 
+  mutate(customer_status = fct_reorder(customer_status, count)) |> 
+  ggplot(aes(customer_status, count, fill = customer_status)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values = c(Stayed = "#219ebc", "darkgrey", "darkgrey")) +
+  labs(x = "Customer Status",
+       y = "Count",
+       title = "Customer Status Count",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7)) +
+  coord_flip()
+```
+
+26.5% customers churned from total, and 6.45% are customers who decided to join.  
+67% customers stayed.  
+
+```{r}
+churn_df %>% 
+  ggplot(aes(married, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal, name = "Customer Status") +
+  labs(x = "Marriage Status",
+       y = "Count",
+       title = "Churned Customer for Marriage Status",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Customers who decided to leave are mostly not married and most of them are older than 30.  
+
+```{r}
+churn_df %>%
+  mutate(number_of_dependents = factor(number_of_dependents)) %>% 
+  ggplot(aes(number_of_dependents, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal, name = "Customer Status") +
+  labs(x = "Number of Dependents",
+       y = "Count",
+       title = "Number of Dependents for Customers",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Most customers have 0 dependents.    
+For 1-3 dependents only few people decided to leave.  
+
+```{r}
+churn_df %>% 
+  group_by(city, customer_status) %>% 
+  summarise(count = n(), .groups = "drop") %>%
+  filter(customer_status == "Churned") %>%
+  arrange(desc(count)) %>% 
+  mutate(city = fct_reorder(city, count)) %>% 
+  head(10) %>% 
+  ggplot(aes(city, count, fill = city)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values = c("darkgrey", "darkgrey", "darkgrey", "darkgrey",
+                               "darkgrey", "darkgrey", "darkgrey", "darkgrey",
+                               "darkgrey", "#780000")) +
+  coord_flip() +
+  labs(x = "City",
+       y = "Churned Count",
+       title = "Top 10 cities with most churned customers",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+San Diego is the city with most churned customers.  
+
+```{r}
+churn_df |> 
+  filter(city == "San Diego" & customer_status == "Churned") |> 
+  select(city, customer_status, churn_category, churn_reason) |> 
+  group_by(churn_category, churn_reason) |> 
+  summarise(count = n(), .groups = "drop") |> 
+  arrange(desc(count)) |>
+  mutate(churn_reason = fct_reorder(churn_reason, count)) |> 
+  ggplot(aes(churn_reason, count, fill = churn_reason)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values = c("darkgrey", "darkgrey", "darkgrey", "darkgrey",
+                               "darkgrey", "darkgrey", "darkgrey", "darkgrey",
+                               "darkgrey", "#780000")) +
+  coord_flip() +
+  labs(x = "Churn Reason",
+       y = "Count",
+       title = "Churn Reasons for San Diego",
+       subtitle = "Top city for churned customers",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.subtitle = element_text(face = "bold", color = "darkgrey", size = 8),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Main reason for San Diego customers to churn is that competitor made better offers.  
+
+```{r}
+churn_df %>% 
+  group_by(city, customer_status) %>% 
+  summarise(count = n(), .groups = "drop") %>%
+  filter(customer_status == "Stayed") %>%
+  arrange(desc(count)) %>% 
+  mutate(city = fct_reorder(city, count)) %>% 
+  head(10) %>% 
+  ggplot(aes(city, count, fill = city)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values = c("darkgrey", "darkgrey", "darkgrey", "darkgrey",
+                               "darkgrey", "darkgrey", "darkgrey", "darkgrey",
+                               "darkgrey", "#219ebc")) +
+  coord_flip() +
+  labs(x = "City",
+       y = "Retained Count",
+       title = "Top 10 cities who retained most customers",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Los Angeles retained most customers.  
+
+```{r}
+churn_df %>% 
+  ggplot(aes(factor(number_of_referrals), fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal, name = "Customer Status") +
+  labs(x = "Number of Referrals",
+       y = "Count",
+       title = "Customer Status for Referrals",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Customers who have 1 have highest percentage of customers churned, followed by 0 referrals.    
+
+```{r}
+churn_df %>% 
+  group_by(tenure_in_months, customer_status) %>% 
+  summarise(count = n(), .groups = "drop") %>% 
+  filter(customer_status == "Churned") %>% 
+  arrange(desc(count)) %>% 
+  head(10) %>% 
+  mutate(tenure_in_months = factor(tenure_in_months)) %>% 
+  ggplot(aes(tenure_in_months, count, group = 1)) +
+  geom_line(color = "#0d3b66", show.legend = FALSE) +
+  geom_point(color = "#0d3b66", size = 2, show.legend = FALSE) +
+  labs(x = "Tenure Duration (Months)",
+       y = "Churned Count",
+       title = "Tenure in Months for Churned customers",
+       subtitle = "Top 10 entries",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.subtitle = element_text(face = "bold", color = "darkgrey", size = 8),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Most customers churned at the earliest stages of their tenure.  
+
+```{r}
+churn_df |> 
+  filter(customer_status == "Churned" & tenure_in_months == 1) |> 
+  select(tenure_in_months, customer_status, churn_category, churn_reason) |> 
+  group_by(churn_category, churn_reason) |> 
+  summarise(count = n(), .groups = "drop") |> 
+  arrange(desc(count)) |>
+  mutate(churn_reason = fct_reorder(churn_reason, count)) |> 
+  ggplot(aes(churn_reason, count, fill = churn_category)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  labs(x = "Churn Reason",
+       y = "Count",
+       title = "Count of Reasons for Churn",
+       subtitle = "Tenure equal to 1 month",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.subtitle = element_text(face = "bold", color = "darkgrey", size = 8),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Customers who leave at early stage have been offered better offers and devices from competitors, and their are also been an attitude problem from support persons and service providers.  
+
+```{r}
+churn_df %>% 
+  group_by(tenure_in_months, customer_status) %>% 
+  summarise(count = n(), .groups = "drop") %>% 
+  filter(customer_status == "Stayed") %>% 
+  arrange(desc(count)) %>% 
+  head(10) %>% 
+  mutate(tenure_in_months = factor(tenure_in_months)) %>% 
+  ggplot(aes(tenure_in_months, count, group = 1)) +
+  geom_line(color = "#0d3b66", show.legend = FALSE) +
+  geom_point(color = "#0d3b66", size = 2, show.legend = FALSE) +
+  labs(x = "Tenure Duration (Months)",
+       y = "Retained Count",
+       title = "Tenure in Months for Retained customers",
+       subtitle = "Top 10 entries",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.subtitle = element_text(face = "bold", color = "darkgrey", size = 8),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Most retained customers are with company for longer period.  
+
+```{r}
+churn_df %>% 
+  ggplot(aes(offer, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal, name = "Customer Status") +
+  coord_flip() +
+  labs(x = "Offer Accepted",
+       y = "Count",
+       title = "Customer Status for Offer Accepted",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7)) +
+  scale_x_discrete(limits = c("Offer E", "Offer D", "Offer C", "Offer B", "Offer A",
+                                "None"))
+```
+
+Most of the customers who accepted Offer-E churned, Customer who accepted Offer A have the least amount of churned customers, while most of the customer did not accept any kind of offer.  
+Company should offer "Offer A" to new customers.  
+
+Competitor and attitude main problems here also.  
+
+```{r}
+churn_df %>% 
+  ggplot(aes(phone_service, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal) +
+  coord_flip() +
+  labs(x = "Home Phone Service",
+       y = "Count",
+       title = "Customer Status for Home Phone Service Subscription",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+For home phone service both type of customers have almost similar percent of churned customers.  
+
+Customers with phone service churn for better offers and devices from competitors, customers who do not have phone service go for better devices.   
+
+```{r}
+churn_df |> 
+  ggplot(aes(avg_monthly_long_distance_charges, fill = customer_status)) +
+  geom_histogram(bins = 40) +
+  scale_fill_manual(values = cust_status_pal) +
+  labs(x = "Average Monthly Long Distance Charges",
+       y = "Count",
+       title = "Distribution of Customers across Average Monthly Long Distance Charges",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+```{r}
+churn_df %>%
+  filter(!is.na(multiple_lines)) |> 
+  ggplot(aes(multiple_lines, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal) +
+  coord_flip() +
+  labs(x = "Multiple Phone Lines",
+       y = "Count",
+       title = "Customer Status for Multiple Phone Lines",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+```{r}
+churn_df %>% 
+  ggplot(aes(internet_service, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal) +
+  coord_flip() +
+  labs(x = "Internet Service Subscription",
+       y = "Count",
+       title = "Customer Status for Internet Service Subscription",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Most churned customers have a subscription of internet service.  
+Company should provide better Internet Service.  
+
+```{r}
+churn_df %>% 
+  dplyr::filter(!is.na(internet_type)) |> 
+  ggplot(aes(internet_type, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal) +
+  coord_flip() +
+  labs(x = "Internet Type",
+       y = "Count",
+       title = "Customer Status for Internet Type",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Fiber Optic users are more likely to churn.  
+Fiber Optics Should get better upgrades.  
+Fiber Optic users go for better offers and devices, while DSL and Cable users go for better devices.  
+
+```{r}
+churn_df |> 
+  ggplot(aes(avg_monthly_gb_download, fill = customer_status)) +
+  geom_histogram(bins = 30) +
+  scale_fill_manual(values = cust_status_pal) +
+  labs(x = "Average Monthly GB Download",
+       y = "Count",
+       title = "Distribution of Customers across Average Monthly GB's Download",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+```{r}
+churn_df %>%
+  dplyr::filter(!is.na(online_security)) |> 
+  ggplot(aes(online_security, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal) +
+  coord_flip() +
+  labs(x = "Online Security",
+       y = "Count",
+       title = "Customer Status for Online Security",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+If customers are not subscribed to the additional online security, they are most likely to churn. Customers should be encouraged for online security.  
+
+Customers who opted for online additional security main reason for their exit is competitor and attitude. Customers who do not subscribe go for better offers and devices from competitor.  
+
+```{r}
+churn_df %>% 
+  dplyr::filter(!is.na(online_backup)) |> 
+  ggplot(aes(online_backup, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal) +
+  coord_flip() +
+  labs(x = "Online Backup",
+       y = "Count",
+       title = "Customer Status for Online Backup",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Again if customers are not subscribed to online backup they will churn.  
+
+Competitor and attitude if subscribed for online backup or not.  
+
+```{r}
+churn_df %>% 
+  filter(!is.na(device_protection_plan)) |>  
+  ggplot(aes(device_protection_plan, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal) +
+  coord_flip() +
+  labs(x = "Device Protection Plan",
+       y = "Count",
+       title = "Customer Status for Device Protection Plan",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+```{r}
+churn_df %>%  
+  filter(!is.na(premium_tech_support)) |> 
+  ggplot(aes(premium_tech_support, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal) +
+  coord_flip() +
+  labs(x = "Premium Tech Support",
+       y = "Count",
+       title = "Customer Status for Premium Tech Support",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+More Customers should be encouraged for premium tech support.   
+
+```{r}
+churn_df %>% 
+  filter(!is.na(streaming_tv)) |>  
+  ggplot(aes(streaming_tv, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal) +
+  coord_flip() +
+  labs(x = "Tv Streaming",
+       y = "Count",
+       title = "Customer Status for Tv Streaming",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+```{r}
+churn_df %>% 
+  filter(!is.na(streaming_movies)) |>  
+  ggplot(aes(streaming_movies, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal) +
+  coord_flip() +
+  labs(x = "Movies Streaming",
+       y = "Count",
+       title = "Customer Status for Movies Streaming",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+```{r}
+churn_df %>%  
+  filter(!is.na(streaming_music)) |> 
+  ggplot(aes(streaming_music, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal) +
+  coord_flip() +
+  labs(x = "Music Streaming",
+       y = "Count",
+       title = "Customer Status for Music Streaming",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+```{r}
+churn_df %>% 
+  ggplot(aes(contract, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal) +
+  coord_flip() +
+  labs(x = "Contract Type",
+       y = "Count",
+       title = "Customer Status for Contract Type",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7)) +
+  scale_x_discrete(limits = c( "Two Year", "One Year", "Month-to-Month"))
+```
+
+Users who have Month-to-Month subscription are more tend to churn, compare to 1 or 2 year subscription. More Customers should be encouraged to go for 1 or 2 year subscription plan.    
+
+```{r}
+churn_df |> 
+  filter(customer_status == "Churned" & contract == "Month-to-Month") |> 
+  select(contract, customer_status, churn_category, churn_reason) |> 
+  group_by(churn_category, churn_reason) |> 
+  summarise(count = n(), .groups = "drop") |> 
+  arrange(desc(count)) |>
+  mutate(churn_reason = fct_reorder(churn_reason, count)) |> 
+  ggplot(aes(churn_reason, count, fill = churn_category)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  labs(x = "Churn Reason",
+       y = "Count",
+       title = "Count of Reasons for Churn for Contract",
+       subtitle = "Contract type [Month-to-Month]",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.subtitle = element_text(face = "bold", color = "darkgrey", size = 8),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+```{r}
+churn_df %>% 
+  ggplot(aes(paperless_billing, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal) +
+  coord_flip() +
+  labs(x = "Paperless Billing",
+       y = "Count",
+       title = "Customer Status for Paperless Billing",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Customer choosing paperless billing have a higher percentage for churned customers. Paperless billing must get upgraded and better.  
+
+```{r}
+churn_df %>% 
+  ggplot(aes(payment_method, fill = customer_status)) +
+  geom_bar() +
+  scale_fill_manual(values = cust_status_pal) +
+  coord_flip() +
+  labs(x = "Payment Method",
+       y = "Count",
+       title = "Customer Status for Payment Method",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Bank withdrawal have more churned in numbers, but mailed check have less customers but slightly more percentage churned compare to bank withdrawal. They both have highest percentages. More customers should get converted to credit cards.    
+
+Credit Card payment should be encouraged.    
+
+```{r}
+churn_df |> 
+  ggplot(aes(monthly_charge, fill = customer_status)) +
+  geom_histogram(bins = 30) +
+  scale_fill_manual(values = cust_status_pal) +
+  labs(x = "Average Monthly Charges",
+       y = "Count",
+       title = "Distribution of Customer's Average Monthly Charges",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+```{r}
+churn_df |> 
+  ggplot(aes(total_long_distance_charges, fill = customer_status)) +
+  geom_histogram(bins = 30) +
+  scale_fill_manual(values = cust_status_pal) +
+  labs(x = "Total Long Distance Charges",
+       y = "Count",
+       title = "Distribution of Customer's Across Long Distance Charges",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(legend.title = element_text(face = "bold", color = "darkgrey", size = 8),
+        legend.text = element_text(face = "bold", color = "darkgrey", size = 7),
+        legend.position = "top",
+        axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+```{r}
+churn_df |> 
+  ggplot(aes(customer_status,total_revenue, fill = customer_status)) +
+  geom_boxplot(show.legend = FALSE, outlier.color = "#780000", outlier.alpha = 0.1) +
+  scale_fill_manual(values = cust_status_pal) +
+  labs(x = "Customer Status",
+       y = "Total Revenue",
+       title = "Total Revenue Distribution For Each Customer Status") +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Total Revenue for churned customers has lowest average revenue as compared to stayed customers. Churned customers have lot of outliers.  
+
+```{r}
+churn_df %>% 
+  filter(!is.na(churn_category)) %>%
+  group_by(churn_category) %>% 
+  summarise(count = n(), .groups = "drop") %>% 
+  arrange(desc(count)) %>% 
+  mutate(churn_category = fct_reorder(churn_category, count)) %>% 
+  ggplot(aes(churn_category, count, fill = churn_category)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values = c(Competitor = "#780000", "darkgrey", "darkgrey",
+                               "darkgrey", "darkgrey")) +
+  coord_flip() +
+  labs(x = "Churn Category",
+       y = "Count",
+       title = "Count for each Churn Category",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Competitor is the most listed churn category.  
+
+```{r}
+churn_df %>% 
+  filter(!is.na(churn_reason)) %>% 
+  group_by(churn_reason) %>% 
+  summarise(count = n(), .groups = "drop") %>% 
+  arrange(desc(count)) %>% 
+  mutate(churn_reason = fct_reorder(churn_reason, count)) %>% 
+  head(10) %>% 
+  ggplot(aes(churn_reason, count, fill = churn_reason)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values = c("darkgrey", "darkgrey", "darkgrey", "darkgrey",
+                               "darkgrey", "darkgrey", "darkgrey", "#780000",
+                               "#780000", "#780000")) +
+  coord_flip() +
+  labs(x = "Churn Reason",
+       y = "Count",
+       title = "Churn Reason provide by Customers",
+       caption = "Data Source : Maven Analytics") +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.x = element_text(face = "bold", color = "darkgrey", size = 7),
+        axis.title.y = element_text(face = "bold", color = "darkgrey", size = 9),
+        axis.text.y = element_text(face = "bold", color = "darkgrey", size = 7),
+        plot.title = element_text(face = "bold", color = "darkgrey", size = 11),
+        plot.caption = element_text(face = "bold", color = "darkgrey", size = 7))
+```
+
+Most customers churned because competitor have better devices and made better offers.  
+Attitude of support person is also one of the top 3 reasons.  
+
+### Key Takeaways :  
+* Churned customers have the higher median value compared to those who stayed.  
+* 26.5% customers churned from total, and 6.45% are customers who decided to join.  
+67% customers stayed.  
+* Customers who decided to leave are mostly not married and most of them are older than 30.  
+* We have more customers with 0 dependents, and here we have most churned customers.  
+* Customers with 1-3 dependents have a low percentage of churned customers.  
+* San Diego is the city with most churned customers.  
+* Main reason for San Diego customers to churn is that competitor made better offers.  
+* Los Angeles retained most customers.  
+* Customers who have 1 have highest percentage of customers churned, followed by 0 referrals.  
+* Most customers churned at the earliest stages of their tenure.  
+* Customers who leave at early stage have been offered better offers and devices from competitors, and their are also been an attitude problem from support persons and service providers.  
+* Most retained customers are with company for longer period.  
+* Most of the customers who accepted Offer-E churned, Customer who accepted Offer A have the least amount of churned customers, while most of the customer did not accept any kind of offer. Competitor and attitude main problems here also.  
+* For home phone service both type of customers have almost similar percent of churned customers. Customers with phone service churn for better offers and devices from competitors, customers who do not have phone service go for better devices.  
+* Most churned customers have a subscription of internet service.  
+* Fiber Optic users are more likely to churn. Fiber Optic users go for better offers and devices, while DSL and Cable users go for better devices.  
+* If customers are not subscribed to the additional online security, they are most likely to churn. Customers who opted for online additional security main reason for their exit is competitor and attitude. Customers who do not subscribe go for better offers and devices from competitor.  
+* Most Customers churned have not opted for online backup. Competitor and attitude if subscribed for online backup or not.  
+* Customers who have not opted for device protection plan and premium tech support will churn.  
+* Customers who decided not to stream TV, movie, or music have higher percentage for churning customers, but quite near to customers who decided.  
+* Users who have Month-to-Month subscription are more tend to churn, compare to 1 or 2 year subscription.  
+* Customer choosing paperless billing have a higher percentage for churned customers.  
+* Bank withdrawal have more churned in numbers, but mailed check have less customers but slightly more percentage churned compare to bank withdrawal. They both have highest percentages.  
+* Credit Card payment should be encouraged.  
+* Mostly if refunds are 0 people churn.  
+* Competitor is the most listed churn category.  
+* Most customers churned because competitor have better devices and made better offers.  
+Attitude of support person is also one of the top 3 reasons.  
+
+### Recommendations :  
+* Better offers and devices should be provided than competitors.  
+* Credit Card payment should be encouraged.  
+* Customers should get promo offers for 1 or 2 year contract.  
+* Fiber Optics service should be made better.  
+* Internet service should get better in general.  
+* Offer E should be deprecated.  
+* Offer A should be promoted.  
+* Their should be more better offers to get customers into getting offers.  
+* At the start customers should get **Offer A** to stay for longer periods.  
+* In San Diego offers should get better for customer retention.   

@@ -1,0 +1,690 @@
+---
+title: "Airline Passenger Satisfaction"
+author: "Basharat Asghar"
+date: '2022-11-10'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+#### Required Libraries
+
+```{r}
+library(ggplot2)
+library(vroom)
+library(dplyr)
+library(forcats)
+library(tidyr)
+library(skimr)
+library(janitor)
+```
+
+#### Reading data
+
+```{r}
+passenger_df <- vroom("airline_passenger_satisfaction.csv")
+```
+
+#### Look into data frame structure and statistics
+
+```{r}
+skim(passenger_df)
+```
+
+Data frame consists of more than 100K observations with 24 columns. Data frame have 5 character variables {columns}, they have no missing value.14 columns consist of numeric type, only Arrival Delay have missing values, for most of the variables distributions is not skewed.
+
+#### Converting names to standard r names with janitor
+
+```{r}
+passenger_df <- passenger_df %>% 
+  clean_names()
+```
+
+```{r,results='hide',include=FALSE,eval=FALSE}
+passenger_df %>% 
+  get_dupes()
+```
+
+#### Removing values containing 'NA'
+
+```{r}
+passenger_df <- passenger_df %>% 
+  filter(!is.na(arrival_delay))
+```
+
+### Exploratory Data Analysis {EDA}
+
+#### Numerical Data
+
+**Converting Age into Age-Categories**  
+
+```{r}
+passengers_df1 <- passenger_df %>% 
+  mutate(age = case_when(age >= 0 & age <=12 ~ "Children",
+                         age >=13 & age <=19 ~ "Teenagers",
+                         age >=20 & age <=25 ~ "Youngsters",
+                         age >=26 & age <=55 ~ "MiddleAge",
+                         age > 55  ~ "Old"),
+         age = as.factor(age)) %>% 
+  mutate(flight_distance = case_when(flight_distance > 0 & flight_distance <= 500 ~ "short-distance",
+                                     flight_distance > 500 & flight_distance <= 1500 ~ "Midrange-distance",
+                                     flight_distance > 1500 & flight_distance <= 3000 ~ "MidrangePlus-distance",
+                                     flight_distance > 3000 & flight_distance <= 5000 ~ "Long-distance"),
+         flight_distance = as.factor(flight_distance)) %>% 
+  mutate(departure_delay = case_when(departure_delay == 0 ~ "No-delay",
+                                     departure_delay > 0 & departure_delay <= 100 ~ "0-100",
+                                     departure_delay > 100 & departure_delay <= 300 ~ "100-300",
+                                     departure_delay > 300 & departure_delay <= 500 ~ "300-500",
+                                     departure_delay > 500 ~ "> 500"),
+         departure_delay = as.factor(departure_delay)) %>% 
+  mutate(arrival_delay = case_when(arrival_delay == 0 ~ "No-delay",
+                                   arrival_delay > 0 & arrival_delay <= 100 ~ "0-100",
+                                   arrival_delay > 100 & arrival_delay <= 300 ~ "100-300",
+                                   arrival_delay > 300 & arrival_delay <= 500 ~ "300-500",
+                                   arrival_delay > 500 ~ "> 500"),
+         arrival_delay = as.factor(arrival_delay))
+```
+
+```{r}
+passengers_df1 %>% 
+  ggplot(aes(age, fill = age)) +
+  geom_bar(position = "dodge", show.legend = FALSE) +
+  facet_wrap(vars(satisfaction), ncol = 2) +
+  scale_fill_manual(values = c(MiddleAge = "#219ebc", "darkgrey", "darkgrey", "darkgrey",
+                               "darkgrey")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  labs(x = "Age",
+       y = "Count of Passengers",
+       title = "Passengers who are satisfied or not w.r.t Age Categories",
+       caption = "Data Source : Maven Analytics") +
+  coord_flip()
+```
+
+Middle age passengers are about 62% of the total, and little over 50% are dis-satisfied with the airline. For different genders trend for dis-satisfied or satisfied customers is the same.\
+After Middle age, Old and young customers make about 29% of the passengers, and from these 61% are dis-satisfied.
+
+```{r}
+passengers_df1 %>% 
+  ggplot(aes(flight_distance, fill = satisfaction)) +
+  geom_bar(position = "dodge", show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Flight Distance (Miles)",
+       y = "Count of Passengers",
+       title = "Passengers who are satisfied or not w.r.t Flight Distance",
+       caption = "Data Source : Maven Analytics") +
+  coord_flip()
+```
+
+Mid-Range & Short-Range distances categories have about 70% customers, and about 46% from them are dis-satisfied.  
+
+```{r,warning=FALSE}
+passengers_df1 %>%
+  ggplot(aes(departure_delay, fill = satisfaction)) +
+  geom_bar(position = "dodge", show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  scale_x_discrete(limits = c(">500", "300-500", "100-300", "0-100", "No-delay")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Departure Delay (Minutes)",
+       y = "Count of Passengers",
+       title = "Passengers who are satisfied or not w.r.t Departure Delay",
+       caption = "Data Source : Maven Analytics") +
+  coord_flip()
+```
+
+Total 56-57% are dis-satisfied, and 0-100 & no-delay categories have up-to 97% of passengers from these two we have about 54-55% dis-satisfied customers.
+
+```{r}
+passengers_df1 %>%
+  ggplot(aes(arrival_delay, fill = satisfaction)) +
+  geom_bar(position = "dodge", show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  scale_x_discrete(limits = c(">500", "300-500", "100-300", "0-100", "No-delay")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Arrival Delay (Minutes)",
+       y = "Count of Passengers",
+       title = "Passengers who are satisfied or not w.r.t Arrival Delay",
+       caption = "Data Source : Maven Analytics") +
+  coord_flip()
+```
+
+Same is true for arrival delay as 57% are dis-satisfied & majority are from two mentioned categories.
+
+```{r}
+passenger_df %>%
+  mutate(departure_and_arrival_time_convenience =     as_factor(departure_and_arrival_time_convenience)) %>% 
+  ggplot(aes(departure_and_arrival_time_convenience, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Departure & Arrival time convience",
+       y = "Count of passengers",
+       title = "Time convience w.r.t Satisfaction",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+passenger_df %>%
+  mutate(ease_of_online_booking = as_factor(ease_of_online_booking)) %>%
+  ggplot(aes(ease_of_online_booking, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Ease of online booking",
+       y = "Count of passengers",
+       title = "Ease of online booking w.r.t Satisfaction",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+passenger_df %>%
+  mutate(check_in_service = as_factor(check_in_service)) %>% 
+  ggplot(aes(check_in_service, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Check-In Service",
+       y = "Count of passengers",
+       title = "Check-In Service w.r.t Satisfaction",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+passenger_df %>%
+  mutate(online_boarding = as_factor(online_boarding)) %>% 
+  ggplot(aes(online_boarding, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Online Boarding",
+       y = "Count of passengers",
+       title = "Online Boarding w.r.t Satisfaction",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+passenger_df %>%
+  mutate(gate_location = as_factor(gate_location)) %>% 
+  ggplot(aes(gate_location, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Gate Location",
+       y = "Count of passengers",
+       title = "Gate location w.r.t Satisfaction",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+passenger_df %>%
+  mutate(on_board_service = as_factor(on_board_service)) %>% 
+  ggplot(aes(on_board_service, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "On-Board Service",
+       y = "Count of passengers",
+       title = "On-Board Service w.r.t Satisfaction",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+passenger_df %>%
+  mutate(seat_comfort = as_factor(seat_comfort)) %>% 
+  ggplot(aes(seat_comfort, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Seat Comfort",
+       y = "Count of passengers",
+       title = "Seat Comfort w.r.t Satisfaction",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+passenger_df %>%
+  mutate(leg_room_service = as_factor(leg_room_service)) %>% 
+  ggplot(aes(leg_room_service, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Leg Room Service",
+       y = "Count of passengers",
+       title = "Leg Room Service w.r.t Satisfaction",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+passenger_df %>%
+  mutate(cleanliness = as_factor(cleanliness)) %>% 
+  ggplot(aes(cleanliness, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Cleanliness",
+       y = "Count of passengers",
+       title = "Cleanliness w.r.t Satisfaction",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+passenger_df %>%
+  mutate(food_and_drink = as_factor(food_and_drink)) %>% 
+  ggplot(aes(food_and_drink, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Food and Drink",
+       y = "Count of passengers",
+       title = "Food and Drink w.r.t Satisfaction",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+passenger_df %>%
+  mutate(in_flight_service = as_factor(in_flight_service)) %>% 
+  ggplot(aes(in_flight_service, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "In-Flight Service",
+       y = "Count of passengers",
+       title = "In-Flight Service w.r.t Satisfaction",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+passenger_df %>%
+  mutate(in_flight_wifi_service = as_factor(in_flight_wifi_service)) %>% 
+  ggplot(aes(in_flight_wifi_service, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "In-Flight WiFi Service",
+       y = "Count of passengers",
+       title = "In-Flight WiFi Service w.r.t Satisfaction",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+passenger_df %>%
+  mutate(in_flight_entertainment = as_factor(in_flight_entertainment)) %>% 
+  ggplot(aes(in_flight_entertainment, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "In-Flight Entertainment",
+       y = "Count of passengers",
+       title = "In-Flight Entertainment w.r.t Satisfaction",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+passenger_df %>%
+  mutate(baggage_handling = as_factor(baggage_handling)) %>% 
+  ggplot(aes(baggage_handling, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Baggage Handling",
+       y = "Count of passengers",
+       title = "Baggage Handling w.r.t Satisfaction",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+avg_ratings <- passenger_df %>%
+  summarise(across(departure_and_arrival_time_convenience:baggage_handling, mean, na.rm=TRUE)) %>% 
+  pivot_longer(departure_and_arrival_time_convenience:baggage_handling,
+               names_to = "service", values_to = "avg_rating") %>%
+  mutate(service = as.factor(service),
+         service = fct_reorder(service, avg_rating))
+
+avg_ratings %>% 
+  ggplot(aes(service, avg_rating, fill = service)) +
+  geom_col(show.legend = FALSE) +
+  geom_hline(yintercept = mean(avg_ratings$avg_rating), color = "#ee9b00", size = 1.5) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.subtitle = element_text(color = "darkgrey", face = "bold", size = 9),
+        plot.caption = element_text(color = "darkgrey", face = "bold")) +
+  labs(x = "Service Provided",
+       y = "Average rating for each Service",
+       title = "Average rating for each Service provided by Air-line",
+       subtitle = "Line represents the average of ratings for all services",
+       caption = "Maven Analytics") +
+  scale_fill_manual(values = c(food_and_drink = "darkred",  departure_and_arrival_time_convenience = "darkred", gate_location = "darkred",
+                               ease_of_online_booking = "darkred",
+                               in_flight_wifi_service = "darkred", "darkgrey",
+                               "darkgrey", "darkgrey", "darkgrey", "darkgrey",
+                               "darkgrey", "darkgrey", "darkgrey", "darkgrey")) +
+  coord_flip()
+```
+
+In-Flight-WiFi-Service, Ease-of-Online-Booking, Gate-Location have the lowest average for ratings.\
+In-Flight-Service have the highest average rating but about 62% are the dis-satisfied customers, as compare to other services where dis-satisfied customers are in the range of 55-57%.
+
+### Categorical Data
+
+```{r}
+passenger_df %>% 
+  ggplot(aes(satisfaction, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.subtitle = element_text(color = "darkgrey", face = "bold", size = 9),
+        plot.caption = element_text(color = "darkgrey", face = "bold")) +
+  labs(x = "Satisfaction",
+       y = "Count of Passengers",
+       title = "No.of customers who are satisfied or not",
+       caption = "Data Source : Maven Analytics") +
+  scale_fill_manual(values = c("#1d3557", "#457b9d"))
+```
+
+**57% customers are dis-satisfied over-all.**  
+
+```{r}
+passenger_df %>% 
+  ggplot(aes(gender, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Gender",
+       y = "Count of Passengers",
+       title = "No.of customers who are satisfied or not for Gender",
+       caption = "Data Source : Maven Analytics")
+```
+
+```{r}
+passenger_df %>% 
+  ggplot(aes(customer_type, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Type of customers",
+       y = "Count of Passengers",
+       title = "No.of customers who are satisfied or not for Type of Customers",
+       caption = "Data Source : Maven Analytics")
+```
+
+First-Time customers are 18% of the total but 76% are dis-satisfied.\
+Returning are more in numbers and 52% are dis-satisfied.
+
+```{r}
+passenger_df %>% 
+  ggplot(aes(type_of_travel, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Travel Type",
+       y = "Count of Passengers",
+       title = "No.of customers who are satisfied or not for Travel Type",
+       caption = "Data Source : Maven Analytics")
+```
+
+Personal travelers are about 31% but 90% from these are dis-satisfied.
+
+```{r}
+passenger_df %>% 
+  ggplot(aes(class, fill = satisfaction)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("#1d3557", "#457b9d")) +
+  theme_light() +
+  theme(axis.title.x = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.x = element_text(face = "bold", size = 7, color = "darkgrey"),
+        axis.title.y = element_text(face = "bold",size = 9, color = "darkgrey"),
+        axis.text.y = element_text(face = "bold", size = 7, color = "darkgrey"),
+        plot.title = element_text(color = "darkgrey", face = "bold", size = 11),
+        plot.caption = element_text(color = "darkgrey", face = "bold"),
+        strip.text.x = element_text(face = "bold", size = 8, color = "darkgrey"),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(vars(satisfaction)) +
+  labs(x = "Travel Class",
+       y = "Count of Passengers",
+       title = "No.of customers who are satisfied or not for Travel Class",
+       caption = "Data Source : Maven Analytics")
+```
+
+Business class is doing good with almost 70% satisfied customers.\
+Economy is having worst customer experience as they count for 45% of total passengers and more than 80% are dis-satisfied.\
+Economy Plus have lowest count of customers but there 75% customers are also dis-satisfied.
+
+### Key Takeaways:
+
+1.  Middle age passengers are about 62% of the total, and little over 50% are dis-satisfied with the airline. For different genders trend for dis-satisfied or satisfied customers is the same.\
+    After Middle age, Old and young customers make about 29% of the passengers, and from these 61% are dis-satisfied.
+
+2.  Mid-Range & Short-Range distances categories have about 70% customers, and about 46% from them are dis-satisfied.
+
+3.  0-100 & no-delay categories have up-to 97% of passengers from these two we have about 54-55% dis-satisfied customers.
+
+4.  Same is true for arrival Delay.
+
+5.  In-Flight-WiFi-Service, Ease-of-Online-Booking, Gate-Location, Departure_arrival_time_convenience, Food_and_Drink have the average rating less than overall average rating.
+
+6.  In-Flight-Service have the highest average rating but about 62% are the dis-satisfied customers, as compare to other services where dis-satisfied customers are in the range of 55-57%.
+
+7.  Overall 57% customers are dis-satisfied.
+
+8.  Female are 57% and males are 56% dis-satisfied.
+
+9.  First-Time customers are 18% of the total but 76% are dis-satisfied.\
+    Returning are more in numbers and 52% are dis-satisfied.
+
+10. Personal travelers are about 31% but 90% from these are dis-satisfied.
+
+11. Business class is doing good with almost 70% satisfied customers.\
+    Economy is having worst customer experience as they count for 45% of total passengers and more than 80% are dis-satisfied.\
+    Economy Plus have lowest count of customers but there 75% customers are also dis-satisfied.  
+    
+### Recommendations :  
+1. Middle-Age customers should get more attention, as they are in bulk.  
+   - Young & Old customers must also get good services.  
+2. In-Flight-WiFi-Service, Ease-of-Online-Booking, Gate-Location, Food_and_Drink,
+   Departure_arrival_time_convenience, these services should be improved on, as they have
+   the average rating lower than overall average rating.  
+3. In-Flight-Service have gets highest average rating, but still need improvements, as 
+   most dis-satisfied percentage of customers is also from this service.  
+4. First-Time customers should get high quality service, so, that they can be convinced
+   to return more often.  
+5. Personal travelers & Economy & Economy Plus class travelers should also receive high
+   quality service.  
+6. Overall all services provided by company need improvements.  
